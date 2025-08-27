@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "rti-app",
+    "slug": "rti-express",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/Assets/RTIExpress1.png",
+    "scheme": "rtiapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.krishlabs.rtiapp"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/Assets/RTIExpress1.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.krishlabs.rtiapp",
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./src/Assets/RTIExpress1.png"
+    },
+    "plugins": [
+      "expo-router",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./src/Assets/RTIExpress1.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-localization",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "useNextGenBuildSystem": true
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7f18d7ef-f23f-4ed5-a4b4-e7c0db238359"
+      }
+    },
+    "owner": "thanush-expo",
+    "runtimeVersion": "1.0.0"
+  }
+}

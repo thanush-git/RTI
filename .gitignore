@@ -1,0 +1,47 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Expo / Metro
+.expo/
+.expo-shared/
+dist/
+web-build/
+.expo-dev/
+
+# Build outputs
+android/app/build/
+android/build/
+ios/build/
+ios/Pods/
+*.apk
+*.aab
+
+# IDE / OS files
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+
+# Logs
+logs
+*.log
+
+# Env / Secrets
+.env
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+
+# Temporary files
+coverage/
+*.tmp
+*.temp
