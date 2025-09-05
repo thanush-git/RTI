@@ -3,6 +3,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from "expo-file-system";
 import { useContext, useState, useEffect } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Picker } from '@react-native-picker/picker';
+import messaging from '@react-native-firebase/messaging';
+import axios from 'axios';
 
 import {
   Alert,
@@ -13,6 +16,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { UserContext } from './UserContext';
 
@@ -23,22 +27,134 @@ export default function AddPostScreen({ navigation }) {
   const [category, setCategory] = useState('');
   const [videoLink, setVideoLink] = useState('');
   const [article, setArticle] = useState('');
+  const [selectedValue, setSelectedValue] = useState('');
+  const [fcmTokenSaved, setFcmTokenSaved] = useState(false);
 
   const { userData, userPosts, setUserPosts } = useContext(UserContext);
+
+  // Function to save FCM token
+  const saveFCMToken = async () => {
+    try {
+      // Check if token is already saved in this session
+      const tokenSaved = await AsyncStorage.getItem('fcmTokenSaved');
+      if (tokenSaved === 'true') {
+        setFcmTokenSaved(true);
+        return true;
+      }
+
+      // Request notification permission
+      const authStatus = await messaging().requestPermission();
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+      if (enabled) {
+        console.log('Authorization status:', authStatus);
+
+        // Get FCM token
+        const token = await messaging().getToken();
+        console.log('FCM Token:', token);
+
+        if (token) {
+          // Get user ID from userData context
+          const userId = userData?.id || userData?._id || "687f1ae1c681d5f4fdb37a68"; // fallback ID
+          const platform = Platform.OS;
+
+          console.log('Saving token with data:', { userId, token, platform });
+
+          // Get JWT token for authorization
+          const jwtToken = await AsyncStorage.getItem("JWTRTIToken");
+
+          // Save token to backend with proper headers
+          const result = await axios.post("https://api.rtiexpress.in/v1/notification/savetoken", {
+            userId,
+            token,
+            platform
+          }, {
+            headers: {
+              'Content-Type': 'application/json',
+              ...(jwtToken && { 'Authorization': `Bearer ${jwtToken}` })
+            }
+          });
+
+          console.log('FCM Token saved successfully:', result.data);
+
+          // Mark as saved in local storage
+          await AsyncStorage.setItem('fcmTokenSaved', 'true');
+          setFcmTokenSaved(true);
+          return true;
+        } else {
+          console.log('No FCM token received');
+          return true;
+        }
+      } else {
+        console.log('Notification permission denied');
+        // Still allow posting even if notification permission is denied
+        return true;
+      }
+    } catch (error) {
+      console.error('Error saving FCM token:', error);
+
+      // Log more details about the error
+      if (error.response) {
+        console.error('Error response status:', error.response.status);
+        console.error('Error response data:', error.response.data);
+        console.error('Error response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+
+      // Don't block posting if FCM token saving fails
+      return true;
+    }
+  };
 
   // Request permissions when component mounts
   useEffect(() => {
     (async () => {
+      // Request image picker permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Camera roll permissions are required to upload images.');
       }
+
+      // Save FCM token
+      await saveFCMToken();
+
+      // Handle foreground messages
+      const unsubscribe = messaging().onMessage(async remoteMessage => {
+        console.log('A new FCM message arrived!', remoteMessage);
+
+        if (remoteMessage.notification) {
+          Alert.alert(
+            remoteMessage.notification.title || 'Notification',
+            remoteMessage.notification.body || ''
+          );
+        }
+      });
+
+      // Handle background messages
+      messaging().onNotificationOpenedApp(remoteMessage => {
+        console.log('Notification caused app to open from background state:', remoteMessage);
+      });
+
+      // Check whether an initial notification is available
+      messaging()
+        .getInitialNotification()
+        .then(remoteMessage => {
+          if (remoteMessage) {
+            console.log('Notification caused app to open from quit state:', remoteMessage);
+          }
+        });
+
+      return unsubscribe;
     })();
   }, []);
 
   const pickPostImage = async () => {
     try {
-      // Request permissions first
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== 'granted') {
@@ -47,7 +163,7 @@ export default function AddPostScreen({ navigation }) {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Fixed: Use MediaTypeOptions instead of MediaType
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 0.8,
       });
@@ -62,12 +178,18 @@ export default function AddPostScreen({ navigation }) {
   };
 
   const handlePostSubmit = async () => {
-    if (!postImage || !heading || !category || !article) {
+    if (!postImage || !category || !article || !heading) {
       Alert.alert("Validation Error", "All required fields must be filled.");
       return;
     }
 
     try {
+      // Ensure FCM token is saved before posting
+      if (!fcmTokenSaved) {
+        console.log('Saving FCM token before posting...');
+        await saveFCMToken();
+      }
+
       let formData = new FormData();
 
       // Attach image
@@ -77,21 +199,22 @@ export default function AddPostScreen({ navigation }) {
         type: "image/jpeg",
       });
 
-      //Get the JWT Token
-      const token = await AsyncStorage.getItem("jwtRTIToken");
+      // Get the JWT Token
+      const token = await AsyncStorage.getItem("JWTRTIToken");
+      console.log(token);
 
-       if (!token) {
-            throw new Error("No token found in storage");
-       }
+      if (!token) {
+        throw new Error("No token found in storage");
+      }
 
       // Other fields
       formData.append("headline", heading);
       formData.append("description", article);
-      formData.append("location", "AP"); // you can replace with dynamic value
+      formData.append("location", "AP");
       formData.append("category", category);
       formData.append("language", "English");
 
-      const response = await fetch("http://api.rtiexpress.in/api/v1/news/upload", {
+      const response = await fetch("http://api.rtiexpress.in/v1/news/upload", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -104,6 +227,14 @@ export default function AddPostScreen({ navigation }) {
       if (response.ok) {
         Alert.alert("Success", "News uploaded successfully!");
         console.log(data);
+
+        // Reset form
+        setPostImage(null);
+        setHeading('');
+        setArticle('');
+        setCategory('');
+        setSelectedValue('');
+
         navigation.navigate("ProfilePreview");
       } else {
         console.error("Upload failed:", data);
@@ -124,56 +255,55 @@ export default function AddPostScreen({ navigation }) {
           <Image source={{ uri: postImage }} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <Feather name="camera" size={30} color="#aaa" />
-            <Text style={styles.imageText}>Add Post Image</Text>
+            <Feather name="plus" size={30} color="#aaa" />
+            <Text style={styles.imageText}>Add Cover Photo/Video</Text>
           </View>
         )}
       </TouchableOpacity>
 
       <TextInput
-        placeholder="Add Heading"
+        placeholder="News Title (max 100 letters)"
         placeholderTextColor="#555"
         value={heading}
         onChangeText={setHeading}
         style={styles.input}
+        maxLength={100}
       />
 
       <TextInput
-        placeholder="Add Tag"
-        placeholderTextColor="#555"
-        value={tag}
-        onChangeText={setTag}
-        style={styles.input}
-      />
-
-      <TextInput
-        placeholder="Category"
-        placeholderTextColor="#555"
-        value={category}
-        onChangeText={setCategory}
-        style={styles.input}
-      />
-
-      <TextInput
-        placeholder="Add Video Link"
-        placeholderTextColor="#555"
-        value={videoLink}
-        onChangeText={setVideoLink}
-        style={styles.input}
-      />
-
-      <TextInput
-        placeholder="Write Articles"
+        placeholder="Add News/Article (max 1500 letters)"
         placeholderTextColor="#555"
         value={article}
         onChangeText={setArticle}
         style={[styles.input, styles.articleInput]}
         multiline
-        numberOfLines={6}
+        numberOfLines={20}
+        maxLength={1500}
       />
 
+      <View style={styles.category}>
+        <Picker
+          selectedValue={selectedValue}
+          onValueChange={(itemValue, itemIndex) => setCategory(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Select Category" value="" />
+          <Picker.Item label="Politics" value="politics" />
+          <Picker.Item label="Technology" value="technology" />
+          <Picker.Item label="Sports" value="sports" />
+          <Picker.Item label="Business" value="business" />
+          <Picker.Item label="Entertainment" value="entertainment" />
+          <Picker.Item label="Education" value="education" />
+          <Picker.Item label="Lifestyle" value="lifestyle" />
+          <Picker.Item label="Travel" value="travel" />
+          <Picker.Item label="Local News" value="local" />
+          <Picker.Item label="International News" value="international" />
+          <Picker.Item label="Breaking News" value="breaking" />
+        </Picker>
+      </View>
+
       <TouchableOpacity style={styles.postButton} onPress={handlePostSubmit}>
-        <Text style={styles.postButtonText}>POST</Text>
+        <Text style={styles.postButtonText}>Publish</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -184,13 +314,14 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
     backgroundColor: '#fff',
+    paddingTop: 45,
   },
   title: {
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
-    color: '#000', // title text color
+    color: '#000',
   },
   imageBox: {
     backgroundColor: '#f5f5f5',
@@ -199,12 +330,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    borderWidth: 2,
+    borderColor: 'gray',
+    borderStyle: 'dashed',
   },
   imagePlaceholder: {
     alignItems: 'center',
   },
   imageText: {
-    color: '#666', // softer gray
+    color: '#666',
     marginTop: 10,
     fontSize: 14,
   },
@@ -212,6 +346,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 10,
+  },
+  picker: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    color: 'black',
   },
   input: {
     backgroundColor: '#f9f9f9',
@@ -222,7 +361,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   articleInput: {
-    height: 120,
+    height: 250,
     textAlignVertical: 'top',
   },
   postButton: {
@@ -230,11 +369,14 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 50,
   },
   postButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  category: {
+    marginBottom: 15,
   },
 });

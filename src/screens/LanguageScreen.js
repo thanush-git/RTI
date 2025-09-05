@@ -5,12 +5,13 @@ import CountryFlag from "react-native-country-flag";
 const languages = [
   { id: 1, name: 'Telugu', code: 'IN' },
   { id: 2, name: 'Hindi', code: 'IN' },
-  { id: 3, name: 'English', code: 'US' }
+  { id: 3, name: 'English', code: 'IN' },
+  { id: 4, name: 'Kannada', code: 'IN' },
 ];
 
-const LanguageSelector = ({ navigation }) => {
+const LanguageSelector = ({ navigation, route }) => {
   const [selectedLanguage, setSelectedLanguage] = useState(null);
-
+  const { state } = route.params;
   const handleLanguageSelect = (language) => {
     setSelectedLanguage(language);
   };
@@ -18,7 +19,8 @@ const LanguageSelector = ({ navigation }) => {
   const handleNext = () => {
     if (selectedLanguage) {
       // Navigate to next screen with language info
-      navigation.navigate('ConstituencyScreen', { language: selectedLanguage });
+      console.log(state);
+      navigation.navigate('ConstituencyScreen', { state, language: selectedLanguage });
     } else {
       alert('Please select a language first.');
     }

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -16,20 +18,20 @@ const slides = [
     key: '1',
     
     image: require('../Assets/NewsImage.png'),
-    title: 'Lorem Ipsum is simply dummy',
-    desc: 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.',
+    title: 'Empowering News at Your Fingertips',
+    desc: 'Stay informed with verified, real-time news from your city, town, and community. RTI Express brings transparency and relevance to your everyday updates.',
   },
   {
     key: '2',
     image: require('../Assets/NewsImage1.png'),
-    title: 'Lorem Ipsum is simply dummy',
-    desc: 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.',
+    title: 'Local Voices, Real Impact',
+    desc: 'Our platform gives voice to everyday citizens. Share, report, and read stories that matter most in your area—straight from the people who live there.',
   },
   {
     key: '3',
     image: require('../Assets/NewsImage2.png'),
-    title: 'Lorem Ipsum is simply dummy',
-    desc: 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.',
+    title: 'Curated & Credible Content',
+    desc: 'From breaking news to verified RTI (Right to Information) stories—get personalized news that’s trustworthy, accessible, and impactful.',
   },
 ];
 
@@ -85,31 +87,36 @@ export default function Onboarding({ navigation }) {
 
       {/* dots + buttons */}
       <View style={styles.bottomBar}>
-        <View style={styles.dots}>
-          {slides.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, index === i && styles.dotActive]}
-            />
-          ))}
-        </View>
+        <View style={styles.row}>
+          {/* dots */}
+          <View style={styles.dots}>
+            {slides.map((_, i) => (
+              <View
+                key={i}
+                style={[styles.dot, index === i && styles.dotActive]}
+              />
+            ))}
+          </View>
 
-        <View style={styles.actions}>
-          {index > 0 ? (
-            <TouchableOpacity style={[styles.btn, styles.backBtn]} onPress={goBack}>
-              <Text style={[styles.btnText, styles.backBtnText]}>Back</Text>
+          {/* actions */}
+          <View style={styles.actions}>
+            {index > 0 ? (
+              <TouchableOpacity style={[styles.btn, styles.backBtn]} onPress={goBack}>
+                <Text style={[styles.btnText, styles.backBtnText]}>Back</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 70 }} />
+            )}
+
+            <TouchableOpacity style={[styles.btn, styles.nextBtn]} onPress={goNext}>
+              <Text style={styles.btnText}>
+                {index === slides.length - 1 ? 'Get Started' : 'Next'}
+              </Text>
             </TouchableOpacity>
-          ) : (
-            <View style={{ width: 70 }} />
-          )}
-
-          <TouchableOpacity style={[styles.btn, styles.nextBtn]} onPress={goNext}>
-          <Text style={styles.btnText}>
-              {index === slides.length - 1 ? 'Get Started' : 'Next'}
-            </Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
+
     </View>
   );
 }
@@ -121,15 +128,20 @@ const styles = StyleSheet.create({
   slide: { flex: 1, backgroundColor: '#fff' },
   image: { width: '100%', height: height * 0.55 },
   content: { padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
-  desc: { fontSize: 14, color: '#555' },
+  title: { color: "black",fontSize: 26, fontWeight: '700', marginBottom: 4 },
+  desc: { fontSize: 16, color: '#555' },
 
   bottomBar: {
     height: BOTTOM_HEIGHT,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    backgroundColor: '#fff',
+      paddingHorizontal: 20,
+      paddingBottom: 24,
+      backgroundColor: '#fff',
+      justifyContent: 'center',
+  },
+  row: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   dots: { flexDirection: 'row', marginTop: 8 },
   dot: {
@@ -153,10 +165,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backBtn: {
-    backgroundColor: '#F1F1F1',
+    //color: '#babcc1',
   },
   backBtnText: {
-    color: '#555',
+    color: '#babcc1',
   },
   nextBtn: {
     backgroundColor: '#2F6BFF',

@@ -28,14 +28,14 @@ try {
 }
 
 // Configure for development - this is crucial for phone auth in development
-if (__DEV__) {
-  // Disable app verification for testing (only in development!)
-  // This allows phone auth to work without reCAPTCHA
-  if (auth.settings) {
-    auth.settings.appVerificationDisabledForTesting = true;
-  }
-
-  console.log('🔧 Firebase Auth configured for development with app verification disabled');
-}
+//if (__DEV__) {
+//  // Disable app verification for testing (only in development!)
+//  // This allows phone auth to work without reCAPTCHA
+//  if (auth.settings) {
+//    auth.settings.appVerificationDisabledForTesting = true;
+//  }
+//
+//  console.log('🔧 Firebase Auth configured for development with app verification disabled');
+//}
 
 export { app, auth };

@@ -5,9 +5,24 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Image,
+  ScrollView,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
+
+const statesData = [
+  {
+    name: 'Andhra Pradesh',
+    image:
+      require('../../assets/images/andhra.webp'),
+  },
+  {
+    name: 'Telangana',
+    image:
+          require('../../assets/images/telangana.jpg'),
+  },
+];
 
 const NewsSourceScreen = ({ navigation }) => {
   const [selectedState, setSelectedState] = useState(null);
@@ -21,38 +36,28 @@ const NewsSourceScreen = ({ navigation }) => {
       alert('Please select a state');
       return;
     }
-    // Proceed with selectedState
     console.log('Selected:', selectedState);
-     navigation.navigate('LanguageScreen', { state: selectedState }); 
+    navigation.navigate('LanguageScreen', { state: selectedState });
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.cardContainer}>
-        {['AP State', 'Telangana'].map((state) => {
-          const isSelected = selectedState === state;
+      <ScrollView contentContainerStyle={styles.scroll}>
+        {statesData.map((item) => {
+          const isSelected = selectedState === item.name;
           return (
             <TouchableOpacity
-              key={state}
-              onPress={() => handleSelect(state)}
-              style={[
-                styles.card,
-                isSelected && styles.selectedCard,
-              ]}
+              key={item.name}
+              onPress={() => handleSelect(item.name)}
               activeOpacity={0.8}
+              style={[styles.card, isSelected && styles.selectedCard]}
             >
-              <View style={styles.imagePlaceholder} />
-              <Text style={styles.cardTitle}>{state}</Text>
-              <TouchableOpacity
-                onPress={() => handleSelect(state)}
-                style={styles.selectButton}
-              >
-                <Text style={styles.selectText}>Select</Text>
-              </TouchableOpacity>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              <Image source={item.image} style={styles.image} />
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
       <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
         <Text style={styles.nextText}>Next</Text>
@@ -62,63 +67,50 @@ const NewsSourceScreen = ({ navigation }) => {
 };
 
 export default NewsSourceScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#fff',
     justifyContent: 'space-between',
+    marginTop: 30,
   },
-  cardContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 10,
+  scroll: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
   card: {
-    width: width * 0.4,
-    borderRadius: 8,
-    paddingVertical: 20,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fafafa',
+    width: width * 0.9,
+    borderRadius: 20,
+    marginBottom: 20,
+    overflow: 'hidden',
+    marginHorizontal: 20,
   },
   selectedCard: {
-    borderColor: '#9b5de5',
-    borderWidth: 2,
-    backgroundColor: '#fff',
+    backgroundColor: '#a7ceff',
+    //borderWidth: 2,
+    //borderRadius: 15,
   },
-  imagePlaceholder: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 6,
-    marginBottom: 15,
+  image: {
+    width: '100%',
+    borderRadius: 20,
+    height: 250,
+    resizeMode: 'cover',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 10,
+    textAlign: 'center',
+    paddingVertical: 30,
     color: '#333',
-  },
-  selectButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: '#007bff',
-    borderRadius: 5,
-  },
-  selectText: {
-    color: '#007bff',
-    fontWeight: '600',
   },
   nextButton: {
     backgroundColor: '#007bff',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 10,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
   nextText: {
     color: '#fff',

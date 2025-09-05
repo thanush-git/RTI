@@ -3,14 +3,14 @@ import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'reac
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function OTPScreen({ route, navigation }) {
-  const { confirmation } = route.params;
+  const { confirmation , phone} = route.params;
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputRefs = useRef([...Array(6)].map(() => React.createRef()));
 
   async function loginWithPhone(firebaseToken) {
     try {
-      const response = await fetch("https://api.rtiexpress.in/api/v1/auth/firebasePhone", {
+      const response = await fetch("https://api.rtiexpress.in/v1/auth/firebasePhone", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${firebaseToken}`
@@ -20,12 +20,12 @@ export default function OTPScreen({ route, navigation }) {
       const data = await response.json();
 
       if (response.ok) {
-        const token = data.jwtRTIToken; // ✅ correct key
+        const token = data.JWTRTIToken; // ✅ correct key
         if (!token) {
-          throw new Error("jwtRTIToken missing in response");
+          throw new Error("JWTRTIToken missing in response");
         }
 
-        await AsyncStorage.setItem("jwtRTIToken", token); // ✅ store under right key
+        await AsyncStorage.setItem("JWTRTIToken", token); // ✅ store under right key
         console.log("Login success:", data);
       } else {
         console.error("Login failed:", data);
@@ -79,7 +79,7 @@ export default function OTPScreen({ route, navigation }) {
       navigation.replace('StateSelections');
     } catch (err) {
       console.error('OTP verification failed:', err);
-      let errorMessage = 'Invalid OTP. Please try again.';
+      let errorMessage = 'Invalid OTP';
 
       if (err.code === 'auth/invalid-verification-code') {
         errorMessage = 'Invalid verification code. Please check and try again.';
@@ -95,7 +95,7 @@ export default function OTPScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>OTP Verification</Text>
-      <Text style={styles.subtitle}>Enter the 6-digit code sent to your phone</Text>
+      <Text style={styles.subtitle}>Enter the OTP sent to +91{phone}</Text>
 
       <View style={styles.otpContainer}>
         {code.map((digit, index) => (
@@ -135,8 +135,8 @@ export default function OTPScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#fff' },
-  title: { color: 'black',fontSize: 24, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
+  container: { flex: 1, padding: 20, backgroundColor: '#fff', paddingTop:100 },
+  title: { color: '#4e4b66',fontSize: 30, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
   subtitle: { color:'gray',fontSize: 14, color: '#777', marginBottom: 30, textAlign: 'center' },
   otpContainer: {
     flexDirection: 'row',

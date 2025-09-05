@@ -41,13 +41,13 @@ export default function ProfilePreview({ route }) {
 
   const fetchProfile = async () => {
     try {
-      const token = await AsyncStorage.getItem("jwtRTIToken");
+      const token = await AsyncStorage.getItem("JWTRTIToken");
       if (!token) {
         Alert.alert('Error', 'No token found. Please log in again.');
         return;
       }
 
-      const res = await fetch('http://api.rtiexpress.in/api/v1/profile/fetchprofile', {
+      const res = await fetch('http://api.rtiexpress.in/v1/profile/fetch', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -271,7 +271,8 @@ export default function ProfilePreview({ route }) {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#fff' 
+    backgroundColor: '#fff',
+    paddingTop:25,
   },
   topBar: {
     padding: 20,

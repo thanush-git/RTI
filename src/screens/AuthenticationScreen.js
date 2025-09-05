@@ -16,6 +16,8 @@ const LoginScreen = ({ navigation }) => {
   const [agreed, setAgreed] = useState(true);
   const [user, setUser] = useState();
   const [initializing, setInitializing] = useState(true);
+  const [loading, setLoading] = useState(false); //For changing Login button content
+
 
   // Validate Indian 10-digit phone number starting with 6-9
   const isValidPhone = (num) => /^[6-9]\d{9}$/.test(num);
@@ -74,6 +76,7 @@ const LoginScreen = ({ navigation }) => {
     }
 
     try {
+      setLoading(true);
       // Format phone number for Firebase (add +91 for India)
       const formattedPhone = `+91${phone}`;
 
@@ -100,11 +103,11 @@ const LoginScreen = ({ navigation }) => {
   };
 
   // If user is already authenticated, navigate to main app
-  useEffect(() => {
-    if (user && !initializing) {
-      navigation.replace('StateSelections');
-    }
-  }, [user, initializing]);
+//  useEffect(() => {
+//    if (user && !initializing) {
+//      navigation.replace('FullNews');
+//    }
+//  }, [user, initializing]);
 
   if (initializing) {
     return (
@@ -149,8 +152,9 @@ const LoginScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity style={[styles.button, loading && { backgroundColor: '#6b7280' }]}
+       onPress={handleLogin}>
+        <Text style={styles.buttonText}>{loading ? 'Sending OTP...' : 'Login'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -164,7 +168,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     paddingHorizontal: 20,
     paddingTop: 60,
-    justifyContent: 'space-between',
+    //justifyContent: 'space-between',
     paddingBottom: 40,
   },
   title: {
@@ -210,6 +214,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
+    marginTop: 16,
   },
   buttonText: {
     color: '#fff',

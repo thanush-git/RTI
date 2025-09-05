@@ -8,15 +8,17 @@ import {
   TextInput,
 } from 'react-native';
 
-const districtData = [
+const APdistrictData = [
   // Andhra Pradesh (26)
   "Srikakulam", "Parvathipuram Manyam", "Vizianagaram", "Visakhapatnam",
   "Alluri Sitharama Raju", "Anakapalli", "Kakinada", "East Godavari",
   "Konaseema", "Eluru", "West Godavari", "NTR District", "Krishna",
   "Palnadu", "Guntur", "Bapatla", "Sri Potti Sriramulu Nellore", "Prakasam",
   "Kurnool", "Nandyal", "Ananthapuramu", "Sri Sathya Sai", "YSR Kadapa",
-  "Annamayya", "Chittoor", "Tirupati",
+  "Annamayya", "Chittoor", "Tirupati"
+  ]
   // Telangana (33)
+const TSdistrictData = [
   "Adilabad", "Bhadradri Kothagudem", "Hanumakonda", "Hyderabad", "Jagtial",
   "Jangaon", "Jayashankar Bhupalpally", "Jogulamba Gadwal", "Kamareddy",
   "Karimnagar", "Khammam", "Komaram Bheem", "Mahabubabad", "Mahabubnagar",
@@ -26,9 +28,16 @@ const districtData = [
   "Vikarabad", "Wanaparthy", "Warangal", "Yadadri Bhuvanagiri"
 ];
 
-export default function ConstituencyScreen({ navigation }) {
+export default function ConstituencyScreen({ navigation, route}) {
+
   const [search, setSearch] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const { state, language } = route.params;
+
+  const districtData =
+      state === "Andhra Pradesh" ? APdistrictData :
+      state === "Telangana" ? TSdistrictData :
+      [];
 
   const filteredDistricts = districtData.filter(d =>
     d.toLowerCase().includes(search.toLowerCase())
@@ -37,7 +46,6 @@ export default function ConstituencyScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Select your District</Text>
-
         <TextInput
         placeholderTextColor='gray'
         placeholder="Search district"

@@ -149,7 +149,7 @@ function Input({ label, value, onChangeText, icon, keyboardType = 'default' }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 30, backgroundColor: '#fff' },
+  container: { flex: 1, padding: 30, backgroundColor: '#fff', paddingTop:100},
   heading: { fontSize: 22, fontWeight: 'bold', marginBottom: 30, alignSelf: 'center' },
   imageContainer: { alignSelf: 'center', marginBottom: 30 },
   placeholderCircle: {
