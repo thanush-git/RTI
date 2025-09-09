@@ -87,6 +87,7 @@ export default function ProfilePreview({ route }) {
         setProfile((prev) => ({ ...prev, ...userData }));
       }
       fetchProfile();
+      fetchApprovedNews();
     }
   }, [isFocused, route.params, userData]);
 
@@ -98,32 +99,49 @@ export default function ProfilePreview({ route }) {
 
   const myPosts = userPosts || [];
 
-  const recentNews = [
-    {
-      id: '1',
-      category: 'NFTs',
-      title: 'Minting Your First NFT: A Beginner’s Guide',
-      author: profile.fullName,
-      time: '15m ago',
-      image: 'https://ctnft.net/static/site/images/nft/mining-eth/NFT_1M_20K_1000px.png',
-    },
-    {
-      id: '2',
-      category: 'Business',
-      title: '5 Things to Know Before the Stock Market Opens',
-      author: profile.fullName,
-      time: '1h ago',
-      image: 'https://up.yimg.com/ib/th/id/OIP.rlrCRGKOu2_SJgSsi2tViQHaEK?pid=Api&rs=1&c=1&qlt=95&w=182&h=102',
-    },
-  ];
+ //for recentNews https://api.rtiexpress.in/v1/news/fetchByUserId/Approved
+ const [recentNews, setRecentNews] = useState([]);
+
+ const fetchApprovedNews = async () => {
+   try {
+     const token = await AsyncStorage.getItem("JWTRTIToken");
+     if (!token) {
+       Alert.alert("Error", "No token found. Please log in again.");
+       return;
+     }
+
+     const res = await fetch("http://api.rtiexpress.in/v1/news/fetchByUserId/Approved", {
+       method: "GET",
+       headers: {
+         Authorization: `Bearer ${token}`,
+       },
+     });
+
+     if (!res.ok) {
+       const errData = await res.json();
+       console.error("API Error:", errData);
+       Alert.alert("Error", errData.message || "Failed to fetch approved news");
+       return;
+     }
+
+     const data = await res.json();
+     console.log("Approved News:", data);
+
+     if (Array.isArray(data.news)) {
+       setRecentNews(data.news);
+     }
+   } catch (error) {
+     console.error("Network error:", error);
+     Alert.alert("Error", "Unable to fetch approved news. Please try again.");
+   }
+ };
 
   const renderItem = ({ item }) => (
     <View style={styles.newsCard}>
-      <Image source={{ uri: item.image }} style={styles.newsImage} />
+      <Image source={{ uri: item.media }} style={styles.newsImage} />
       <View style={{ flex: 1 }}>
         <Text style={styles.newsCategory}>{item.category}</Text>
-        <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.newsMeta}>{item.author} • {item.time}</Text>
+        <Text style={styles.newsTitle} numberOfLines={2}>{item.headline}</Text>
       </View>
     </View>
   );
