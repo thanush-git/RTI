@@ -34,7 +34,6 @@ export default function FillProfile({ navigation }) {
       setImage(result.assets[0].uri);
     }
   };
-
   
   const handleNext = async () => {
     if (!email || !phone) {

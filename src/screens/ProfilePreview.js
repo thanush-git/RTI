@@ -38,6 +38,106 @@ export default function ProfilePreview({ route }) {
   const [activeTab, setActiveTab] = useState('Pending');
   const [hasPendingContent, setHasPendingContent] = useState(false);
   const [hasApprovedContent, setHasApprovedContent] = useState(false);
+  const [followers, setFollowers] = useState(0);
+  const [following, setFollowing] = useState(0);
+  const [userId, setUserId] = useState(null);
+
+  // Function to get followers count
+  async function getFollowers(userId) {
+    const apiUrl = `http://api.rtiexpress.in/v1/user/followers/${userId}`;
+
+    try {
+      const token = await AsyncStorage.getItem("JWTRTIToken");
+      if (!token) {
+        console.error('No token found');
+        return null;
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Followers API Response:', data);
+      return data;
+
+    } catch (error) {
+      console.error('Error fetching followers:', error);
+      return null;
+    }
+  }
+
+  // Function to get following count
+  async function getFollowing(userId) {
+    const apiUrl = `http://api.rtiexpress.in/v1/user/following/${userId}`;
+
+    try {
+      const token = await AsyncStorage.getItem("JWTRTIToken");
+      if (!token) {
+        console.error('No token found');
+        return null;
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Following API Response:', data);
+      return data;
+
+    } catch (error) {
+      console.error('Error fetching following:', error);
+      return null;
+    }
+  }
+
+  // Function to fetch follower and following counts
+  const fetchFollowCounts = async (userId) => {
+    if (!userId) return;
+
+    try {
+      // Fetch followers and following data in parallel
+      const [followersData, followingData] = await Promise.all([
+        getFollowers(userId),
+        getFollowing(userId)
+      ]);
+
+      if (followersData && followersData.success) {
+        setFollowers(followersData.followerCount || 0);
+      }
+
+      if (followingData && followingData.success) {
+        setFollowing(followingData.followingCount || 0);
+      }
+
+      // Update profile state with the counts
+      setProfile(prev => ({
+        ...prev,
+        followers: followersData?.followerCount || 0,
+        following: followingData?.followingCount || 0
+      }));
+
+    } catch (error) {
+      console.error('Error fetching follow counts:', error);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -65,13 +165,21 @@ export default function ProfilePreview({ route }) {
       console.log('Fetched profile:', data);
 
       if (data.user) {
+        const user = data.user;
+        setUserId(user._id || user.id); // Store user ID for follow counts
+
         setProfile((prev) => ({
           ...prev,
-          username: data.user.userName || '',
-          fullName: data.user.fullName || '',
-          email: data.user.email || '',
-          phone: data.user.phone ? String(data.user.phone) : '',
+          username: user.userName || '',
+          fullName: user.fullName || '',
+          email: user.email || '',
+          phone: user.phone ? String(user.phone) : '',
         }));
+
+        // Fetch follow counts after getting user ID
+        if (user._id || user.id) {
+          await fetchFollowCounts(user._id || user.id);
+        }
       }
     } catch (error) {
       console.error('Network error:', error);
@@ -161,7 +269,7 @@ export default function ProfilePreview({ route }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={28} color="black" />
@@ -180,17 +288,17 @@ export default function ProfilePreview({ route }) {
           />
           <Text style={styles.name}>{profile.fullName || 'Your Name'}</Text>
         </View>
-        
+
         <View style={styles.stats}>
           <View style={styles.statsData}>
-            <Text style={styles.count}>{profile.followers}</Text>
+            <Text style={styles.count}>{followers}</Text>
             <Text style={styles.statsLabel}>Followers</Text>
           </View>
           <View style={styles.statsData}>
-            <Text style={styles.count}>{profile.following}</Text>
+            <Text style={styles.count}>{following}</Text>
             <Text style={styles.statsLabel}>Following</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.statsData}
             onPress={() => handleTabPress('Pending')}
           >
@@ -219,9 +327,9 @@ export default function ProfilePreview({ route }) {
           </TouchableOpacity>
         </View>
       </View>
-      
+
       <View style={styles.tabRow}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tabButton, activeTab === 'Pending' && styles.tabButtonActive]}
           onPress={() => handleTabPress('Pending')}
         >
@@ -229,7 +337,7 @@ export default function ProfilePreview({ route }) {
             Pending {hasPendingContent ? `(${myPosts.length})` : ''}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tabButton, activeTab === 'Approved' && styles.tabButtonActive]}
           onPress={() => handleTabPress('Approved')}
         >
@@ -287,20 +395,20 @@ export default function ProfilePreview({ route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: '#fff',
     paddingTop:25,
   },
   topBar: {
     padding: 20,
-   
+
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  profileTitle: { 
-    fontSize: 18, 
+  profileTitle: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#000',
   },
@@ -314,17 +422,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 20,
   },
-  profilePic: { 
-    width: 80, 
-    height: 80, 
+  profilePic: {
+    width: 80,
+    height: 80,
     borderRadius: 40,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  name: { 
-    fontSize: 16, 
-    fontWeight: '600', 
+  name: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#333',
     textAlign: 'center',
   },
@@ -349,14 +457,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 15,
   },
-  count: { 
-    fontSize: 16, 
-    fontWeight: 'bold', 
+  count: {
+    fontSize: 16,
+    fontWeight: 'bold',
     textAlign: 'center',
     color: '#000',
   },
-  btnRow: { 
-    flexDirection: 'row', 
+  btnRow: {
+    flexDirection: 'row',
     gap: 10,
     width: '100%',
   },
@@ -375,8 +483,8 @@ const styles = StyleSheet.create({
   btnIcon: {
     marginRight: 6,
   },
-  btnText: { 
-    color: '#333', 
+  btnText: {
+    color: '#333',
     fontWeight: '500',
     fontSize: 14,
   },
@@ -401,7 +509,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f8ff',
   },
   tabText: {
-    fontSize: 14, 
+    fontSize: 14,
     color: '#888',
     fontWeight: '500',
   },
@@ -409,7 +517,7 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontWeight: 'bold',
   },
-  listContainer: { 
+  listContainer: {
     paddingHorizontal: 20,
     paddingBottom: 80,
     flexGrow: 1,
@@ -432,20 +540,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 12,
   },
-  newsCategory: { 
-    fontSize: 12, 
+  newsCategory: {
+    fontSize: 12,
     color: '#888',
     fontWeight: '500',
   },
-  newsTitle: { 
-    fontSize: 14, 
-    fontWeight: 'bold', 
+  newsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
     marginVertical: 4,
     color: '#333',
   },
-  newsMeta: { 
-    fontSize: 12, 
-    color: '#555' 
+  newsMeta: {
+    fontSize: 12,
+    color: '#555'
   },
   emptyState: {
     flex: 1,

@@ -11,12 +11,14 @@ import {
   ActivityIndicator,
   Dimensions,
   FlatList,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { height } = Dimensions.get('window');
 
-// Individual Full-Screen News Item (keeping your original design)
-const FullScreenNewsItem = ({ item, isFollowing, onFollowToggle }) => {
+// Individual Full-Screen News Item with dynamic follow logic
+const FullScreenNewsItem = ({ item, followingList, onFollowToggle, currentUserId }) => {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -24,6 +26,14 @@ const FullScreenNewsItem = ({ item, isFollowing, onFollowToggle }) => {
       day: 'numeric'
     });
   };
+
+  // Check if current user is following this news author
+  const isFollowing = followingList.some(followedUser =>
+    followedUser._id === item.userId._id
+  );
+
+  // Don't show follow button if it's the current user's own post
+  const isOwnPost = currentUserId === item.userId._id;
 
   return (
     <View style={styles.container}>
@@ -70,21 +80,38 @@ const FullScreenNewsItem = ({ item, isFollowing, onFollowToggle }) => {
           {/* Author Details */}
           <View style={styles.authorDetails}>
             <View style={styles.authorInfo}>
-              <Text style={styles.authorName}>RTI Express</Text>
+              <Text style={styles.authorName}>
+                {item.userId.name || item.userId.fullName || 'Unknown Author'}
+              </Text>
               <Text style={styles.authorDate}>{formatDate(item.createdAt)}</Text>
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.followPill,
-                !isFollowing && { backgroundColor: '#fff', borderWidth: 1, borderColor: '#007AFF' },
-              ]}
-              onPress={onFollowToggle}
-            >
-              <Text style={[styles.followText, !isFollowing && { color: '#007AFF' }]}>
-                {isFollowing ? 'Following' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
+            {/* Show appropriate button based on post ownership */}
+            {isOwnPost ? (
+              <TouchableOpacity
+                style={[
+                  styles.followPill,
+                  { backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#ddd' }
+                ]}
+                disabled={true}
+              >
+                <Text style={[styles.followText, { color: '#666' }]}>
+                  You
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.followPill,
+                  !isFollowing && { backgroundColor: '#fff', borderWidth: 1, borderColor: '#007AFF' },
+                ]}
+                onPress={() => onFollowToggle(item.userId._id, isFollowing)}
+              >
+                <Text style={[styles.followText, !isFollowing && { color: '#007AFF' }]}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -100,10 +127,135 @@ const FullScreenNewsItem = ({ item, isFollowing, onFollowToggle }) => {
 export default function FullNews() {
   const navigation = useNavigation();
   const [news, setNews] = useState([]);
-  const [isFollowing, setIsFollowing] = useState(true);
+  const [followingList, setFollowingList] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const flatListRef = useRef(null);
+
+  // Fetch current user's following list
+  const fetchFollowingList = async (userId) => {
+    try {
+      const token = await AsyncStorage.getItem("JWTRTIToken");
+      if (!token) {
+        console.error('No token found');
+        return [];
+      }
+
+      const response = await fetch(`http://api.rtiexpress.in/v1/user/following/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Following API Response:', data);
+
+      if (data.success && data.following) {
+        return data.following;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching following list:', error);
+      return [];
+    }
+  };
+
+  // Fetch current user profile to get user ID
+  const fetchCurrentUser = async () => {
+    try {
+      const token = await AsyncStorage.getItem("JWTRTIToken");
+      if (!token) {
+        console.error('No token found');
+        return null;
+      }
+
+      const response = await fetch('http://api.rtiexpress.in/v1/profile/fetch', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Current user profile:', data);
+
+      if (data.user) {
+        return data.user._id || data.user.id;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+      return null;
+    }
+  };
+
+  // Follow/Unfollow API call
+  const toggleFollow = async (targetUserId, isCurrentlyFollowing) => {
+    try {
+      const token = await AsyncStorage.getItem("JWTRTIToken");
+      if (!token) {
+        Alert.alert('Error', 'Please log in to follow users');
+        return;
+      }
+
+      let response;
+
+      if (isCurrentlyFollowing) {
+        // Unfollow API call (assuming similar pattern)
+        response = await fetch(`http://api.rtiexpress.in/v1/user/follow/${targetUserId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } else {
+        // Follow API call
+        response = await fetch(`http://api.rtiexpress.in/v1/user/follow/${targetUserId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+
+      const data = await response.json();
+      console.log('Follow/Unfollow API Response:', data);
+
+      if (response.ok && data.success) {
+        // Update following list locally
+        if (isCurrentlyFollowing) {
+          // Remove from following list
+          setFollowingList(prev => prev.filter(user => user._id !== targetUserId));
+        } else {
+          // Add to following list
+          setFollowingList(prev => [...prev, { _id: targetUserId }]);
+        }
+
+        Alert.alert(
+          'Success',
+          isCurrentlyFollowing ? 'Unfollowed successfully' : 'Following successfully'
+        );
+      } else {
+        Alert.alert('Error', data.message || 'Failed to update follow status');
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      Alert.alert('Error', 'Network error. Please try again.');
+    }
+  };
 
   // Fetch news from API
   const fetchNews = async () => {
@@ -127,14 +279,34 @@ export default function FullNews() {
     }
   };
 
-  // Load news on component mount
+  // Initialize data on component mount
   useEffect(() => {
-    fetchNews();
+    const initializeData = async () => {
+      try {
+        // Get current user ID first
+        const userId = await fetchCurrentUser();
+        if (userId) {
+          setCurrentUserId(userId);
+
+          // Fetch following list for current user
+          const following = await fetchFollowingList(userId);
+          setFollowingList(following);
+        }
+
+        // Fetch news
+        await fetchNews();
+      } catch (error) {
+        console.error('Error initializing data:', error);
+        setError('Failed to load data');
+      }
+    };
+
+    initializeData();
   }, []);
 
   // Handle follow toggle
-  const handleFollowToggle = () => {
-    setIsFollowing((prev) => !prev);
+  const handleFollowToggle = (targetUserId, isCurrentlyFollowing) => {
+    toggleFollow(targetUserId, isCurrentlyFollowing);
   };
 
   // Error state
@@ -258,8 +430,9 @@ export default function FullNews() {
         renderItem={({ item }) => (
           <FullScreenNewsItem
             item={item}
-            isFollowing={isFollowing}
+            followingList={followingList}
             onFollowToggle={handleFollowToggle}
+            currentUserId={currentUserId}
           />
         )}
         pagingEnabled
